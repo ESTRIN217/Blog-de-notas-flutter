@@ -223,7 +223,12 @@ class _EditorScreenState extends State<EditorScreen> {
     final title = _titleController.text;
     final summary = _summaryController.text;
     final checklistText = _checklistItems.map((item) => '[${item.isChecked ? 'x' : ' '}] ${item.text}').join('\n');
-    Share.share('$title\n\n$summary\n\n$checklistText', subject: title);
+    await SharePlus.instance.share(
+  ShareParams(
+    text: '$title\n\n$summary\n\n$checklistText',
+    subject: title,
+  ),
+);
   }
 
   void _deleteItem() {
