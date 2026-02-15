@@ -446,12 +446,12 @@ class _EditorScreenState extends State<EditorScreen> {
 
   Widget _buildChecklistItem(ChecklistItem item, int index, Color textColor) {
     final controller = _checklistControllers[item.id];
-    if (controller == null) return Container();
+    if (controller == null) return Container(key: ValueKey(item.id));
 
     return ReorderableDelayedDragStartListener(
+      key: ValueKey(item.id),
       index: index,
       child: Row(
-        key: ValueKey(item.id),
         children: [
           Checkbox(
             value: item.isChecked,
