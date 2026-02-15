@@ -327,18 +327,6 @@ class _MyHomePageState extends State<MyHomePage> {
     final isDark = _isColorDark(item.backgroundColor);
     final textColor = isDark ? Colors.white : Colors.black;
 
-    BoxDecoration? decoration;
-    if (item.backgroundImagePath != null) {
-      decoration = BoxDecoration(
-        image: DecorationImage(
-          image: FileImage(File(item.backgroundImagePath!)),
-          fit: BoxFit.cover,
-        ),
-      );
-    } else if (item.backgroundColor != null) {
-      decoration = BoxDecoration(color: Color(item.backgroundColor!));
-    }
-
     final summaryStyle = TextStyle(
       color: textColor.withAlpha((255 * 0.8).round()),
       fontSize: item.fontSize,
@@ -377,21 +365,29 @@ class _MyHomePageState extends State<MyHomePage> {
       ],
     );
 
-    return Container(
-      decoration: decoration,
-      child: Card(
-        elevation: 2,
-        clipBehavior: Clip.antiAlias,
-        color: isSelected
-            ? Theme.of(context).colorScheme.primaryContainer.withAlpha((255 * 0.6).round())
-            : (decoration != null ? Colors.transparent : null),
-        child: InkWell(
-          onTap: () => _isSelectionMode ? _toggleSelection(item) : _navigateToEditor(item),
-          onLongPress: () {
-            if (!_isSelectionMode) {
-              _startSelectionMode(item);
-            }
-          },
+    return Card(
+      elevation: 2,
+      clipBehavior: Clip.antiAlias,
+      color: isSelected
+          ? Theme.of(context).colorScheme.primaryContainer.withAlpha((255 * 0.6).round())
+          : (item.backgroundColor != null ? Color(item.backgroundColor!) : null),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _isSelectionMode ? _toggleSelection(item) : _navigateToEditor(item),
+        onLongPress: () {
+          if (!_isSelectionMode) {
+            _startSelectionMode(item);
+          }
+        },
+        child: Container(
+          decoration: item.backgroundImagePath != null
+              ? BoxDecoration(
+                  image: DecorationImage(
+                    image: FileImage(File(item.backgroundImagePath!)),
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : null,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
