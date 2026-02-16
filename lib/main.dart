@@ -1,14 +1,25 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import 'package:share_plus/share_plus.dart';
 import 'list_item.dart';
 import 'editor_screen.dart';
 import 'checklist_item.dart';
+import 'settings_screen.dart';
+import 'theme_provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -16,13 +27,37 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Notes',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Notes'),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return DynamicColorBuilder(
+          builder: (lightDynamic, darkDynamic) {
+            ColorScheme lightColorScheme;
+            ColorScheme darkColorScheme;
+
+            if (themeProvider.useDynamicColors && lightDynamic != null && darkDynamic != null) {
+              lightColorScheme = lightDynamic;
+              darkColorScheme = darkDynamic;
+            } else {
+              lightColorScheme = ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: Brightness.light);
+              darkColorScheme = ColorScheme.fromSeed(seedColor: Colors.deepPurple, brightness: Brightness.dark);
+            }
+
+            return MaterialApp(
+              title: 'Flutter Notes',
+              theme: ThemeData(
+                colorScheme: lightColorScheme,
+                useMaterial3: true,
+              ),
+              darkTheme: ThemeData(
+                colorScheme: darkColorScheme,
+                useMaterial3: true,
+              ),
+              themeMode: themeProvider.themeMode,
+              home: const MyHomePage(title: 'Flutter Notes'),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -45,36 +80,85 @@ class _MyHomePageState extends State<MyHomePage> {
 
   bool _isSelectionMode = false;
   final List<ListItem> _selectedItems = [];
+  bool _isLoading = true;
 
-  @override
+   @override
   void initState() {
     super.initState();
-    _items = [
-      ListItem(
-        id: 'welcome_note',
-        title: '¡Bienvenido a Flutter Notes!',
-        summary: 'Esta es una nota de ejemplo para que explores las funcionalidades de la app.',
-        lastModified: DateTime.now(),
-        backgroundColor: Colors.amber[200]!.toARGB32(),
-        fontSize: 15.0,
-        checklist: [
-          ChecklistItem(id: 'c1', text: '← Abre el menú para ver más opciones.', isChecked: false),
-          ChecklistItem(id: 'c2', text: '↓ Toca el botón de `+` para crear una nueva nota.', isChecked: false),
-          ChecklistItem(id: 'c3', text: 'Mantén pulsada una nota para seleccionarla y ver más acciones.', isChecked: false),
-          ChecklistItem(id: 'c4', text: 'Personaliza el fondo con el botón de la paleta en el editor.', isChecked: true),
-          ChecklistItem(id: 'c5', text: 'Crea tus propias listas de tareas como esta.', isChecked: false),
-          ChecklistItem(id: 'c6', text: '¡Explora y disfruta de la aplicación!', isChecked: false),
-        ]
-      )
-    ];
-    _filteredItems = _items;
+    _items = [];
+    _filteredItems = [];
     _searchController.addListener(_filterItems);
+    _loadItems();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadItems() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/notes.json');
+
+      if (await file.exists()) {
+        final contents = await file.readAsString();
+        if (contents.isNotEmpty) {
+          final List<dynamic> jsonList = jsonDecode(contents);
+          setState(() {
+            _items = jsonList.map((json) => ListItem.fromJson(json)).toList();
+            _filteredItems = _items;
+            _sortFilteredItems();
+            _isLoading = false;
+          });
+        } else {
+          _createWelcomeNote();
+        }
+      } else {
+        _createWelcomeNote();
+      }
+    } catch (e) {
+      debugPrint("Error loading items: $e");
+       _createWelcomeNote();
+    }
+  }
+
+  void _createWelcomeNote() {
+    final welcomeNote = ListItem(
+      id: 'welcome_note',
+      title: 'Welcome to Flutter Notes!',
+      summary: jsonEncode([
+        {'insert': 'This is a sample note to help you explore the features.\n'}
+      ]),
+      lastModified: DateTime.now(),
+      backgroundColor: Colors.amber[200]!.toARGB32(),
+      checklist: [
+        ChecklistItem(id: 'c1', text: '← Open the menu for more options.', isChecked: false),
+        ChecklistItem(id: 'c2', text: '↓ Tap the `+` button to create a new note.', isChecked: false),
+        ChecklistItem(id: 'c3', text: 'Long-press a note to select it and see more actions.', isChecked: false),
+        ChecklistItem(id: 'c4', text: 'Customize the background with the palette button in the editor.', isChecked: true),
+        ChecklistItem(id: 'c5', text: 'Create your own checklists like this one.', isChecked: false),
+        ChecklistItem(id: 'c6', text: 'Explore and enjoy the app!', isChecked: false),
+      ]
+    );
+    setState(() {
+      _items = [welcomeNote];
+      _filteredItems = _items;
+      _isLoading = false;
+      _saveItems();
+    });
+  }
+
+  Future<void> _saveItems() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/notes.json');
+      final List<Map<String, dynamic>> jsonList = _items.map((item) => item.toJson()).toList();
+      await file.writeAsString(jsonEncode(jsonList));
+    } catch (e) {
+      debugPrint("Error saving items: $e");
+    }
   }
 
 
@@ -128,6 +212,7 @@ class _MyHomePageState extends State<MyHomePage> {
         setState(() {
             _items.removeWhere((i) => i.id == originalItem.id);
             _filterItems();
+             _saveItems();
         });
     } else if (result is ListItem) {
       setState(() {
@@ -138,6 +223,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 _items.removeAt(index);
             }
             _filterItems();
+            _saveItems();
             return;
         }
 
@@ -148,6 +234,7 @@ class _MyHomePageState extends State<MyHomePage> {
         }
 
         _filterItems();
+        _saveItems();
       });
     }
   }
@@ -185,6 +272,7 @@ class _MyHomePageState extends State<MyHomePage> {
       _items.removeWhere((item) => _selectedItems.contains(item));
        _filterItems();
       _exitSelectionMode();
+       _saveItems();
     });
   }
 
@@ -256,6 +344,7 @@ class _MyHomePageState extends State<MyHomePage> {
         }
 
         _filterItems();
+         _saveItems();
     });
   }
 
@@ -300,13 +389,37 @@ class _MyHomePageState extends State<MyHomePage> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
-            const DrawerHeader(decoration: BoxDecoration(color: Colors.deepPurple), child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24))),
-            ListTile(leading: const Icon(Icons.home), title: const Text('Home'), onTap: () => Navigator.pop(context)),
-            ListTile(leading: const Icon(Icons.settings), title: const Text('Settings'), onTap: () => Navigator.pop(context)),
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.deepPurple),
+              child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
+              onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
+              },
+            ),
+            const Divider(),
+            const ListTile(
+              title: Text('v2.0'),
+              enabled: false,
+            ),
           ],
         ),
       ),
-      body: _isListView ? _buildListView() : _buildGridView(),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : (_isListView ? _buildListView() : _buildGridView()),
       floatingActionButton: _isSelectionMode ? null : FloatingActionButton(
         onPressed: () => _navigateToEditor(),
         tooltip: 'Add Item',
@@ -327,12 +440,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final isDark = _isColorDark(item.backgroundColor);
     final textColor = isDark ? Colors.white : Colors.black;
 
-    final summaryStyle = TextStyle(
-      color: textColor.withAlpha((255 * 0.8).round()),
-      fontSize: item.fontSize,
-      fontWeight: item.isBold ? FontWeight.bold : FontWeight.normal,
-      fontStyle: item.isItalic ? FontStyle.italic : FontStyle.normal,
-    );
+     final plainTextSummary = item.document.toPlainText();
 
     final contentColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,15 +457,15 @@ class _MyHomePageState extends State<MyHomePage> {
         if (item.summary.isNotEmpty)
           isListView
               ? Text(
-                  item.summary,
-                  style: summaryStyle,
+                  plainTextSummary,
+                  style: TextStyle(color: textColor.withAlpha((255 * 0.8).round())),
                   maxLines: 10,
                   overflow: TextOverflow.ellipsis,
                 )
               : Expanded(
                   child: Text(
-                    item.summary,
-                    style: summaryStyle,
+                    plainTextSummary,
+                    style: TextStyle(color: textColor.withAlpha((255 * 0.8).round())),
                     maxLines: 6,
                     overflow: TextOverflow.ellipsis,
                   ),
