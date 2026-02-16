@@ -242,7 +242,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _startSelectionMode(ListItem item) {
-    if (_isSelectionMode) return;
+    if (_isSelectionMode) return; 
     setState(() {
       _isSelectionMode = true;
       _selectedItems.add(item);
@@ -384,9 +384,9 @@ class _MyHomePageState extends State<MyHomePage> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.deepPurple),
-              child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
+            DrawerHeader(
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer),
+              child: const Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
             ),
             ListTile(
               leading: const Icon(Icons.home),

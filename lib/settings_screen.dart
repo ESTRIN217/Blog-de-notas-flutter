@@ -1,3 +1,4 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
@@ -11,47 +12,41 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return ListView(
-            children: [
-              SwitchListTile(
-                title: const Text('Use Dynamic Colors'),
-                value: themeProvider.useDynamicColors,
-                onChanged: (value) {
-                  themeProvider.setUseDynamicColors(value);
-                },
-              ),
-              const Divider(),
-              const ListTile(
-                title: Text('Theme Mode'),
-              ),
-            RadioGroup<ThemeMode>(
-  groupValue: themeProvider.themeMode,
-  onChanged: (value) {
-    if (value != null) {
-      themeProvider.setThemeMode(value);
-    }
-  },
-  child: Column(
-    children: [
-      RadioListTile<ThemeMode>(
-        title: const Text('System'),
-        value: ThemeMode.system,
-      ),
-      RadioListTile<ThemeMode>(
-        title: const Text('Light'),
-        value: ThemeMode.light,
-      ),
-      RadioListTile<ThemeMode>(
-        title: const Text('Dark'),
-        value: ThemeMode.dark,
-      ),
-    ],
-  ),
-)
+      body: DynamicColorBuilder(
+        builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+          final isDynamicColorSupported = lightDynamic != null && darkDynamic != null;
 
-            ],
+          return Consumer<ThemeProvider>(
+            builder: (context, themeProvider, child) {
+              return ListView(
+                children: [
+                  if (isDynamicColorSupported)
+                    SwitchListTile(
+                      title: const Text('Use Dynamic Colors'),
+                      value: themeProvider.useDynamicColors,
+                      onChanged: (value) {
+                        themeProvider.setUseDynamicColors(value);
+                      },
+                    ),
+                  if (isDynamicColorSupported) const Divider(),
+                  const ListTile(
+                    title: Text('Theme Mode'),
+                  ),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('System'),
+                    value: ThemeMode.system,
+                  ),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('Light'),
+                    value: ThemeMode.light,
+                  ),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('Dark'),
+                    value: ThemeMode.dark,
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
