@@ -8,9 +8,15 @@
     pkgs.jdk21
     pkgs.unzip
     pkgs.cmake
+    pkgs.ninja
+    pkgs.clang
+    pkgs.pkg-config
+    pkgs.gtk3
   ];
   # Sets environment variables in the workspace
-  env = {};
+  env = {
+    PKG_CONFIG_PATH = "${pkgs.gtk3.dev}/lib/pkgconfig";
+  };
   idx = {
     # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
     extensions = [

@@ -330,23 +330,16 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _onReorder(int oldIndex, int newIndex) {
     setState(() {
-        final itemToMove = _filteredItems[oldIndex];
-        final masterIndexOfItemToMove = _items.indexOf(itemToMove);
+      if (_searchController.text.isNotEmpty) return;
 
-        _items.removeAt(masterIndexOfItemToMove);
+      if (oldIndex < newIndex) {
+        newIndex -= 1;
+      }
+      final item = _items.removeAt(oldIndex);
+      _items.insert(newIndex, item);
 
-        if (newIndex > oldIndex) {
-            final referenceItem = _filteredItems[newIndex-1];
-            final masterIndexOfReferenceItem = _items.indexOf(referenceItem);
-            _items.insert(masterIndexOfReferenceItem + 1, itemToMove);
-        } else {
-            final referenceItem = _filteredItems[newIndex];
-            final masterIndexOfReferenceItem = _items.indexOf(referenceItem);
-            _items.insert(masterIndexOfReferenceItem, itemToMove);
-        }
-
-        _filterItems();
-         _saveItems();
+      _filteredItems = List.from(_items);
+      _saveItems();
     });
   }
 
@@ -437,7 +430,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _buildItem(ListItem item, {bool isListView = true}) {
     final isSelected = _selectedItems.contains(item);
-    final bool canReorder = _sortMethod == SortMethod.custom;
+    final bool canReorder = _sortMethod == SortMethod.custom && _searchController.text.isEmpty;
 
     final isDark = _isColorDark(item.backgroundColor);
     final textColor = isDark ? Colors.white : Colors.black;
@@ -507,7 +500,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: contentColumn,
                 ),
               ),
-              if (canReorder && !_isSelectionMode)
+              if (canReorder && !_isSelectionMode && isListView)
                 ReorderableDragStartListener(
                   index: _filteredItems.indexOf(item),
                   child: Padding(
@@ -523,7 +516,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildListView() {
-    final bool canReorder = _sortMethod == SortMethod.custom;
+    final bool canReorder = _sortMethod == SortMethod.custom && _searchController.text.isEmpty;
     if (canReorder) {
       return ReorderableListView.builder(
         buildDefaultDragHandles: false,
@@ -545,12 +538,11 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildGridView() {
-    final bool canReorder = _sortMethod == SortMethod.custom;
+    final bool canReorder = _sortMethod == SortMethod.custom && _searchController.text.isEmpty;
     final gridDelegate = const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 16, mainAxisSpacing: 16, childAspectRatio: 0.75);
 
     if (canReorder) {
       return ReorderableGridView.builder(
-        dragEnabled: false, 
         padding: const EdgeInsets.all(16.0),
         gridDelegate: gridDelegate,
         itemCount: _filteredItems.length,
