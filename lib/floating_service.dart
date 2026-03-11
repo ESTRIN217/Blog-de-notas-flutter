@@ -18,17 +18,26 @@ class FloatingService {
     }
 
     // 2. Permission Management
-    try {
-      final bool hasPermission = await FloatingWindowManager.instance.hasOverlayPermission();
-      if (!hasPermission) {
-        final bool granted = await FloatingWindowManager.instance.requestOverlayPermission();
-        if (!granted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Permiso denegado para mostrar la ventana flotante.')),
-          );
-          return;
-        }
-      }
+try {
+  final bool hasPermission = await FloatingWindowManager.instance.hasOverlayPermission();
+  
+  // Guard 1: Tras verificar el permiso inicial
+  if (!context.mounted) return;
+
+  if (!hasPermission) {
+    final bool granted = await FloatingWindowManager.instance.requestOverlayPermission();
+    
+    // Guard 2: Tras solicitar el permiso (proceso asíncrono largo)
+    if (!context.mounted) return;
+
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Permiso denegado para mostrar la ventana flotante.')),
+      );
+      return;
+    }
+  }
+  // Continúa con tu lógica...
 final config = FloatingWindowConfig(
   width: 300, // Ajusta el tamaño según necesites
   height: 200,
@@ -43,11 +52,16 @@ final prefs = await SharedPreferences.getInstance();
       // Finally, create the self-contained floating window.
       await FloatingWindowManager.instance.createWindow(config);
 
-    } catch (e) {
-      debugPrint('Error al crear la ventana flotante: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al iniciar el modo flotante: $e')),
-      );
-    }
+    }  catch (e) {
+  debugPrint('Error al crear la ventana flotante: $e');
+  
+  // Guardar el uso del contexto tras el error asíncrono
+  if (!context.mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Error al iniciar el modo flotante: $e')),
+  );
+}
+
   }
 }
