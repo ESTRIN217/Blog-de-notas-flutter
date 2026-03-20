@@ -9,6 +9,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'list_item.dart';
 import 'floating_service.dart';
 
+enum TtsState { playing, stopped }
+
 class EditorScreen extends StatefulWidget {
   final ListItem item;
 
@@ -22,6 +24,7 @@ class _EditorScreenState extends State<EditorScreen> {
   late TextEditingController _titleController;
   late quill.QuillController _contentController;
   late FlutterTts _flutterTts;
+  TtsState _ttsState = TtsState.stopped;
 
   int? _backgroundColorValue;
   String? _backgroundImagePath;
@@ -34,10 +37,34 @@ class _EditorScreenState extends State<EditorScreen> {
       document: widget.item.document,
       selection: const TextSelection.collapsed(offset: 0),
     );
-    _flutterTts = FlutterTts();
-
     _backgroundColorValue = widget.item.backgroundColor;
     _backgroundImagePath = widget.item.backgroundImagePath;
+    _initTts();
+  }
+
+  void _initTts() {
+    _flutterTts = FlutterTts();
+
+    _flutterTts.setStartHandler(() {
+      if (!mounted) return;
+      setState(() {
+        _ttsState = TtsState.playing;
+      });
+    });
+
+    _flutterTts.setCompletionHandler(() {
+      if (!mounted) return;
+      setState(() {
+        _ttsState = TtsState.stopped;
+      });
+    });
+
+    _flutterTts.setErrorHandler((_) {
+      if (!mounted) return;
+      setState(() {
+        _ttsState = TtsState.stopped;
+      });
+    });
   }
 
   @override
@@ -49,6 +76,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   void _saveAndExit() {
+    _flutterTts.stop();
     if (!mounted) return;
     final summaryJson = jsonEncode(_contentController.document.toDelta().toJson());
 
@@ -79,14 +107,16 @@ class _EditorScreenState extends State<EditorScreen> {
     Navigator.pop(context, "DELETE");
   }
 
-  Future<void> _speak() async {
-    final title = _titleController.text;
-    final content = _contentController.document.toPlainText();
-    if (title.isNotEmpty) {
-      await _flutterTts.speak(title);
-    }
-    if (content.isNotEmpty) {
-      await _flutterTts.speak(content);
+  Future<void> _toggleSpeak() async {
+    if (_ttsState == TtsState.playing) {
+      await _flutterTts.stop();
+    } else {
+      final title = _titleController.text;
+      final content = _contentController.document.toPlainText();
+      final fullText = '$title. $content';
+      if (fullText.trim().isNotEmpty) {
+        await _flutterTts.speak(fullText);
+      }
     }
   }
 
@@ -311,8 +341,11 @@ class _EditorScreenState extends State<EditorScreen> {
                   icon: Icon(Icons.text_fields, color: textColor),
                   onPressed: _showTextTools),
               IconButton(
-                  icon: Icon(Icons.volume_up, color: textColor),
-                  onPressed: _speak),
+                  icon: Icon(
+                    _ttsState == TtsState.playing ? Icons.stop : Icons.volume_up,
+                    color: textColor,
+                  ),
+                  onPressed: _toggleSpeak),
             ],
           ),
         ),
