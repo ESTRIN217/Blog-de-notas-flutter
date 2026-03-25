@@ -27,6 +27,7 @@ dependencies:
   flutter_floating_window: ^1.1.0
   font_awesome_flutter: ^11.0.0
   url_launcher: ^6.3.2
+  flutter_launcher_icons: ^0.14.4
 
 dev_dependencies:
   flutter_test:
@@ -37,3 +38,15 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: false
+  image_path: "assets/icon/notas.png"
+  # Opcional: para iconos adaptativos de Android
+  adaptive_icon_background: "#FFFFFF" 
+  adaptive_icon_foreground: "assets/icon/notas.png"
+  # Configuración para Web
+  web:
+    generate: true
+    image_path: "assets/icon/notas.png"
